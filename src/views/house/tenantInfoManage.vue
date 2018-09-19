@@ -7,10 +7,9 @@
           class="upload-demo"
           ref="upload"
           action="https://jsonplaceholder.typicode.com/posts/"
-          :on-preview="handlePreview"
-          :on-remove="handleRemove"
-          :multiple="false"
-          :file-list="fileList"
+          :on-preview="handlePreview"             
+          :limit="1"
+          :file-list="fileList"         
           :auto-upload="false">
           <el-button slot="trigger" size="small" type="primary">选取文件</el-button>
           <el-button  size="small" type="success" @click="preView">预览</el-button>  
@@ -20,11 +19,9 @@
         
       </el-header>
       <el-main>
-        <el-container>
-          
-          <el-header>数据预览</el-header>
+        <el-container>                    
           <el-main>
-            <el-table :data="tableData" border highlight-current-row style="width: 100%;">
+            <el-table :data="tableData" border highlight-current-row style="width: 100%;text-align:center">
              <el-table-column  :label="tableTitle" >
               <el-table-column min-width="150" v-for='item in tableHeader' :prop="item" :label="item" :key='item'>
 
@@ -53,6 +50,8 @@ export default {
   props:{},
   data(){
     return {
+      tableTitle:'',
+      files:'',
       tableData: '', 
       tableHeader: '',
       fileList: [
@@ -63,63 +62,62 @@ export default {
   watch:{},
   computed:{},
   methods:{
-      preView:function(){
-        console.log(this.fileList[0]);
-        this.readerData(this.fileList[0]);
-      },
-      submitUpload() {
-        this.$refs.upload.submit();
-      },
-      handleRemove(file, fileList) {
-        console.log("handleRemove");
-        console.log(file, fileList);
-      },
-      handlePreview(file) {
-        console.log("handlePreview");
-        console.log(file);
-        this.fileList.push(file);
-      },
-      generateDate({ tableTitle, header, results }) {
-        this.tableTitle = tableTitle
-        this.tableData = results
-        this.tableHeader = header
+    beforeUpload(file){           
+      this.files = file;
+      const extension = file.name.split('.')[1] === 'xls'
+      const extension2 = file.name.split('.')[1] === 'xlsx'
+      const isLt2M = file.size / 1024 / 1024 < 5
+      if (!extension && !extension2) {
+      this.$message.warning('上传模板只能是 xls、xlsx格式!')
+      return
+      }
+      if (!isLt2M) {
+      this.$message.warning('上传模板大小不能超过 5MB!')
+      return
+      }
+      this.fileName = file.name;
+      return false // 返回false不会自动上传
     },
-    handleDrop(e) {
-        e.stopPropagation()
-        e.preventDefault()
-        const files = e.dataTransfer.files
-        if (files.length !== 1) {
-            this.$message.error('Only support uploading one file!')
-            return
-        }
-        const itemFile = files[0] // only use files[0]
-        this.readerData(itemFile)
-        e.stopPropagation()
-        e.preventDefault()
+    preView:function(){        
+      this.readerData(this.$refs.upload.uploadFiles[0].raw);        
     },
-    handleDragover(e) {
-        e.stopPropagation()
-        e.preventDefault()
-        e.dataTransfer.dropEffect = 'copy'
+    submitUpload:function() {        
+      this.$refs.upload.submit();
     },
-    readerData(itemFile) {
+    
+    handlePreview:function(file) {
+      this.preView();
+    },
+    generateDate:function({ tableTitle, header, results }) {
+      this.tableTitle = tableTitle
+      this.tableData = results
+      this.tableHeader = header
+    },   
+    readerData(itemFile) {     
         if (itemFile.name.split('.')[1] != 'xls' && itemFile.name.split('.')[1] != 'xlsx') {
             this.$message({message: '上传文件格式错误，请上传xls、xlsx文件！',type: 'warning'});
           } else {
             const reader = new FileReader()
             reader.onload = e => {
+               
                 const data = e.target.result
                 const fixedData = this.fixdata(data)
                 const workbook = XLSX.read(btoa(fixedData), { type: 'base64' })
                 const firstSheetName = workbook.SheetNames[0] // 第一张表 sheet1
-                const worksheet = workbook.Sheets[firstSheetName] // 读取sheet1表中的数据              delete worksheet['!merges']let A_l = worksheet['!ref'].split(':')[1] //当excel存在标题行时
-                worksheet['!ref'] = `A2:${A_l}`
+                const worksheet = workbook.Sheets[firstSheetName] // 读取sheet1表中的数据   
+                      
+                delete worksheet['!merges']
+               
+                let A_l = worksheet['!ref'].split(':')[1] //当excel存在标题行时
+                
+                worksheet['!ref'] = `A1:${A_l}`
                 const tableTitle = firstSheetName
                 const header = this.get_header_row(worksheet)
                 const results = XLSX.utils.sheet_to_json(worksheet)
-                this.generateDate({ tableTitle, header, results })
+                this.generateDate({ tableTitle, header,results })
               }
-                reader.readAsArrayBuffer(itemFile)
+          
+            reader.readAsArrayBuffer(itemFile)
           }
     },
     fixdata(data) {
@@ -133,9 +131,11 @@ export default {
     },
     get_header_row(sheet) {
         const headers = []
-        const range = XLSX.utils.decode_range(sheet['!ref'])
-        //let Cconst R = range.s.r /* start in the first row */
-        for (C = range.s.c; C <= range.e.c; ++C) { /* walk every column in the range */
+       
+        const range = XLSX.utils.decode_range(sheet['!ref'])       
+        //let C 
+        const R = range.s.r /* start in the first row */
+        for (let C = range.s.c; C <= range.e.c; ++C) { /* walk every column in the range */
             var cell = sheet[XLSX.utils.encode_cell({ c: C, r: R })] /* find the cell in the first row */
             var hdr = 'UNKNOWN ' + C // <-- replace with your desired defaultif (cell && cell.t) 
             hdr = XLSX.utils.format_cell(cell)
