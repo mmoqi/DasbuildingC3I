@@ -9,13 +9,15 @@
           action="https://jsonplaceholder.typicode.com/posts/"
           :on-preview="handlePreview"
           :on-remove="handleRemove"
+          :multiple="false"
           :file-list="fileList"
           :auto-upload="false">
           <el-button slot="trigger" size="small" type="primary">选取文件</el-button>
-          <el-button slot="trigger" size="small" type="success">预览</el-button>
+          <el-button  size="small" type="success" @click="preView">预览</el-button>  
           <el-button style="margin-left: 10px;" size="small" type="danger" @click="submitUpload">上传到服务器</el-button>
           <div slot="tip" class="el-upload__tip">只能上传Excel文件</div>
         </el-upload>
+        
       </el-header>
       <el-main>
         <el-container>
@@ -53,20 +55,29 @@ export default {
     return {
       tableData: '', 
       tableHeader: '',
-      fileList: [{name: 'food.jpeg', url: 'https://fuss10.elemecdn.com/3/63/4e7f3a15429bfda99bce42a18cdd1jpeg.jpeg?imageMogr2/thumbnail/360x360/format/webp/quality/100'}, {name: 'food2.jpeg', url: 'https://fuss10.elemecdn.com/3/63/4e7f3a15429bfda99bce42a18cdd1jpeg.jpeg?imageMogr2/thumbnail/360x360/format/webp/quality/100'}]
+      fileList: [
+        // {name: 'food.jpeg', url: 'https://fuss10.elemecdn.com/3/63/4e7f3a15429bfda99bce42a18cdd1jpeg.jpeg?imageMogr2/thumbnail/360x360/format/webp/quality/100'}, {name: 'food2.jpeg', url: 'https://fuss10.elemecdn.com/3/63/4e7f3a15429bfda99bce42a18cdd1jpeg.jpeg?imageMogr2/thumbnail/360x360/format/webp/quality/100'}
+        ]
     }
   },
   watch:{},
   computed:{},
   methods:{
-    submitUpload() {
+      preView:function(){
+        console.log(this.fileList[0]);
+        this.readerData(this.fileList[0]);
+      },
+      submitUpload() {
         this.$refs.upload.submit();
       },
       handleRemove(file, fileList) {
+        console.log("handleRemove");
         console.log(file, fileList);
       },
       handlePreview(file) {
+        console.log("handlePreview");
         console.log(file);
+        this.fileList.push(file);
       },
       generateDate({ tableTitle, header, results }) {
         this.tableTitle = tableTitle
